@@ -1,0 +1,16 @@
+{
+  "name": "Lepas Status",
+  "short_name": "Lepas",
+  "description": "Matriculaciones, mercado y cuota de la red Lepas por área y código postal.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#041B2F",
+  "theme_color": "#041B2F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
