@@ -917,7 +917,7 @@ section,section+section{border-top-style:solid}
 
   <div class="panel" id="panel-review" role="tabpanel" hidden>
     <section class="wrap"><div class="sec sec-full">
-      <div class="sec-head"><h2>Business review</h2><p>Cinco páginas por concesionario con las claves del panel: resultado, evolución, origen de las ventas y potencial. Sigue el periodo elegido arriba.</p></div>
+      <div class="sec-head"><h2>Business review</h2><p>Seis páginas por concesionario con las claves del panel: resultado, evolución, origen de las ventas, mapa de su área y potencial. Sigue el periodo elegido arriba.</p></div>
       <div class="br-bar"><label class="selw"><select id="brSel" aria-label="Concesionario"></select></label><span id="brPer"></span><button type="button" id="brPdf" class="br-btn">Descargar PDF</button><span id="brMsg" aria-live="polite"></span></div>
       <div id="brSlides"></div>
     </div></section>
@@ -1906,6 +1906,30 @@ function brKeys(d) {
   if (d.pri.length) k.push({ ok: false, t: `${OJ.fmt(d.pri.length)} códigos postales prioritarios`, p: `Sin Lepas y con más de 10 matrículas de particulares (jun–30 oct): ${OJ.fmt(d.priT)} matrículas en total. Los mayores: ${d.pri.slice(0, 3).map(cp => `${cp} ${cpName(cp) || ''}`.trim()).join(', ')}.` });
   return k.slice(0, 4);
 }
+/* Mapa del área para la review: polígonos de CPGEO dibujados dentro de la propia diapositiva */
+function brMap(d, bx, by, bw, bh) {
+  if (typeof CPGEO === 'undefined') return `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="${BRC.soft}"/><text x="${bx + bw / 2}" y="${by + bh / 2}" text-anchor="middle" font-size="15" fill="${BRC.muted}">Cargando el mapa…</text>`;
+  const mine = CPS.filter(cp => CPD[cp][0] === d.i && CPGEO[cp] && CPGB[cp]);
+  if (!mine.length) return `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="${BRC.soft}"/><text x="${bx + bw / 2}" y="${by + bh / 2}" text-anchor="middle" font-size="15" fill="${BRC.muted}">Sin códigos postales asignados a su área.</text>`;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  mine.forEach(cp => { const b = CPGB[cp]; x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); });
+  const pad = Math.max(x1 - x0, y1 - y0) * .06 + 4; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+  const k = Math.min(bw / (x1 - x0), bh / (y1 - y0)), ox = bx + (bw - (x1 - x0) * k) / 2 - x0 * k, oy = by + (bh - (y1 - y0) * k) / 2 - y0 * k;
+  const set = new Set(mine), pri = new Set(d.pri), top = d.pri.slice(0, 9);
+  const lep = cp => d.ms.reduce((t, m) => t + (m >= 6 ? CPD[cp][5 + m - 6] || 0 : 0), 0);
+  const sw = w => (w / k).toFixed(2);
+  let bg = '', fg = '';
+  for (const cp in CPGB) { if (set.has(cp)) continue; const b = CPGB[cp]; if (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1 || !CPGEO[cp]) continue; bg += `<path d="${CPGEO[cp]}"/>`; }
+  mine.forEach(cp => { const f = lep(cp) > 0 ? BRC.bk : pri.has(cp) ? BRC.o : '#B9C2CC'; fg += `<path d="${CPGEO[cp]}" fill="${f}"/>`; });
+  let r = `<defs><clipPath id="brc${d.i}"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8"/></clipPath></defs><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="#F7F7F5"/>
+    <g clip-path="url(#brc${d.i})"><g transform="translate(${ox.toFixed(2)} ${oy.toFixed(2)}) scale(${k.toFixed(5)})"><g fill="#E4E6E5" stroke="#FFFFFF" stroke-width="${sw(.8)}">${bg}</g><g stroke="#FFFFFF" stroke-width="${sw(1)}">${fg}</g></g>`;
+  const P = (x, y) => [ox + x * k, oy + y * k];
+  top.forEach((cp, q) => { if (!CPGB[cp]) return; const b = CPGB[cp], [cx, cy] = P((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
+    r += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="10" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2"/><text x="${cx.toFixed(1)}" y="${(cy + 4).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${BRC.ink}">${q + 1}</text>`; });
+  D.pins.filter(pn => pn[2] === d.i && CPGB[pn[1]]).forEach(pn => { const b = CPGB[pn[1]], [cx, cy] = P((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
+    r += `<path d="M${cx.toFixed(1)} ${cy.toFixed(1)}l-8 -13a9.4 9.4 0 1 1 16 0z" fill="${BRC.bk}" stroke="#FFFFFF" stroke-width="2"/><circle cx="${cx.toFixed(1)}" cy="${(cy - 19).toFixed(1)}" r="3.6" fill="${BRC.o}"/>`; });
+  return r + '</g>';
+}
 function brSlides(i, s) {
   const d = brData(i, s), out = [];
   /* 1 · Portada */
@@ -1988,13 +2012,26 @@ function brSlides(i, s) {
     r += `<text x="${R}" y="${y}" font-size="15.5" font-weight="700" fill="${BRC.ink}">${xe(x ? x.name : 'Sin venta en el DMS')}${x ? `<tspan font-weight="400" fill="${BRC.muted}" font-size="13">  · ${x.grupo && x.grupo === d.a.grupo ? 'mismo grupo' : 'otro grupo'}</tspan>` : ''}</text>
       <text x="${R + colW}" y="${y}" font-size="15.5" font-weight="700" text-anchor="end" fill="${BRC.ink}">${cs.length}</text>` + brPara(locs, R, y + 22, colW - 40, 13, BRC.muted, 1.35, 400, 2).svg; });
   out.push(brFrame(r + brFoot(4, d)));
-  /* 5 · Potencial y propuestas */
-  r = brHead(5, 'Potencial en su área y próximos pasos', d);
+  /* 5 · Mapa del área */
+  r = brHead(5, 'Su área de influencia en el mapa', d);
+  { const mw = 820, mx = BRX, my = 160, mh = 480, rx = BRX + mw + 36, rw = BRW - BRX - rx;
+    r += brMap(d, mx, my, mw, mh);
+    const nLep = d.cps.length ? CPS.filter(cp => CPD[cp][0] === d.i && d.ms.some(m => m >= 6 && CPD[cp][5 + m - 6] > 0)).length : 0;
+    const nAll = CPS.filter(cp => CPD[cp][0] === d.i).length;
+    r += `<text x="${rx}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Lectura</text>` + brPara(`${OJ.fmt(nAll)} códigos postales en su área. ${OJ.fmt(nLep)} ya tienen matrículas Lepas en el periodo y ${OJ.fmt(d.pri.length)} son prioritarios.`, rx, 214, rw, 14.5, BRC.muted, 1.45, 400, 5).svg;
+    [[BRC.bk, 'Con matrículas Lepas'], [BRC.o, 'Prioritario: sin Lepas y más de 10 particulares'], ['#B9C2CC', 'Resto de su área'], ['#E4E6E5', 'Otras áreas']].forEach(([c, l], q) => { const y = 330 + q * 40;
+      r += `<rect x="${rx}" y="${y - 13}" width="16" height="16" rx="3" fill="${c}"/>` + brPara(l, rx + 28, y, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg; });
+    const y2 = 330 + 4 * 40 + 10;
+    r += `<circle cx="${rx + 8}" cy="${y2 - 5}" r="9" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2"/><text x="${rx + 8}" y="${y2 - 1}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${BRC.ink}">1</text>` + brPara('Número del CP en la tabla de la página siguiente', rx + 28, y2, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg;
+    r += `<path d="M${rx + 8} ${y2 + 52}l-7 -11a8 8 0 1 1 14 0z" fill="${BRC.bk}"/><circle cx="${rx + 8}" cy="${y2 + 36}" r="3" fill="${BRC.o}"/>` + brPara('Exposición del concesionario', rx + 28, y2 + 46, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg; }
+  out.push(brFrame(r + brFoot(5, d)));
+  /* 6 · Potencial y propuestas */
+  r = brHead(6, 'Potencial en su área y próximos pasos', d);
   r += `<text x="${L}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Códigos postales prioritarios</text>` + brPara(`${OJ.fmt(d.pri.length)} códigos postales de su área sin Lepas y con más de 10 matrículas de particulares (jun–30 oct), de ${OJ.fmt(d.cps.length)} con mercado particular.`, L, 212, colW, 14.5, BRC.muted, 1.4, 400, 2).svg;
   const ty = 268;
   r += `<text x="${L}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">CP</text><text x="${L + 80}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">MUNICIPIO</text><text x="${L + colW}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" text-anchor="end" fill="${BRC.muted}">MERCADO PARTICULAR</text><line x1="${L}" x2="${L + colW}" y1="${ty + 10}" y2="${ty + 10}" stroke="${BRC.line}"/>`;
   d.pri.slice(0, 9).forEach((cp, q) => { const y = ty + 38 + q * 36;
-    r += `<rect x="${L}" y="${y - 10}" width="9" height="9" rx="1.5" fill="${BRC.o}"/><text x="${L + 18}" y="${y}" font-size="15" font-weight="700" fill="${BRC.ink}">${cp}</text><text x="${L + 80}" y="${y}" font-size="15" fill="${BRC.ink}">${xe((cpName(cp) || '').slice(0, 34))}</text><text x="${L + colW}" y="${y}" font-size="15" text-anchor="end" fill="${BRC.ink}">${OJ.fmt(CPX[cp][6])}</text><line x1="${L}" x2="${L + colW}" y1="${y + 12}" y2="${y + 12}" stroke="${BRC.soft}"/>`; });
+    r += `<circle cx="${L + 8}" cy="${y - 5}" r="9" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2"/><text x="${L + 8}" y="${y - 1}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${BRC.ink}">${q + 1}</text><text x="${L + 26}" y="${y}" font-size="15" font-weight="700" fill="${BRC.ink}">${cp}</text><text x="${L + 80}" y="${y}" font-size="15" fill="${BRC.ink}">${xe((cpName(cp) || '').slice(0, 34))}</text><text x="${L + colW}" y="${y}" font-size="15" text-anchor="end" fill="${BRC.ink}">${OJ.fmt(CPX[cp][6])}</text><line x1="${L}" x2="${L + colW}" y1="${y + 12}" y2="${y + 12}" stroke="${BRC.soft}"/>`; });
   if (!d.pri.length) r += brPara('No hay códigos postales prioritarios en su área.', L, ty + 40, colW, 15, BRC.muted).svg;
   const props = [];
   if (d.pri.length) props.push(['Trabajar los códigos postales prioritarios', `Empezar por ${d.pri.slice(0, 3).map(cp => `${cp} ${cpName(cp) || ''}`.trim()).join(', ')}: ${OJ.fmt(d.pri.slice(0, 3).reduce((t, cp) => t + CPX[cp][6], 0))} matrículas de particulares entre los tres.`]);
@@ -2009,7 +2046,7 @@ function brSlides(i, s) {
   props.slice(0, 4).forEach(([t, p], q) => { r += `<text x="${R}" y="${py}" font-size="14" font-weight="700" fill="${BRC.o}">${q + 1}</text><text x="${R + 24}" y="${py}" font-size="16.5" font-weight="700" fill="${BRC.ink}">${xe(t)}</text>`;
     const pp = brPara(p, R + 24, py + 26, colW - 24, 14.5, '#2A3A4C', 1.42, 400, 3); r += pp.svg; py += 40 + pp.h + 22; });
   if (!props.length) r += brPara('Sin propuestas automáticas para este periodo.', R, 232, colW, 15, BRC.muted).svg;
-  out.push(brFrame(r + `<text x="${R}" y="650" font-size="12" fill="${BRC.muted}">Propuestas generadas a partir de los datos del panel; revisar con el concesionario.</text>` + brFoot(5, d)));
+  out.push(brFrame(r + `<text x="${R}" y="650" font-size="12" fill="${BRC.muted}">Propuestas generadas a partir de los datos del panel; revisar con el concesionario.</text>` + brFoot(6, d)));
   return out;
 }
 let brI = -1;
@@ -2019,9 +2056,9 @@ function renderReview(s) {
   if (s.ent >= 0 && A[s.ent].real) brI = s.ent; else if (brI < 0 || !A[brI].real) brI = (es.slice().sort((x, y) => agg([y], LANZ).o - agg([x], LANZ).o)[0] || es[0]).i;
   sel.innerHTML = es.map(a => `<option value="${a.i}"${a.i === brI ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
   document.getElementById('brPer').textContent = perLabel(s.per) + ' 2026';
-  box.innerHTML = brSlides(brI, s).map((svg, k) => `<figure class="br-page"><div class="br-sheet">${svg}</div><figcaption>${k + 1} de 5</figcaption></figure>`).join('');
+  box.innerHTML = brSlides(brI, s).map((svg, k, a) => `<figure class="br-page"><div class="br-sheet">${svg}</div><figcaption>${k + 1} de ${a.length}</figcaption></figure>`).join('');
   btn.disabled = false;
-  if (typeof CPNAME === 'undefined' && !cpDataP) loadCPData().then(() => { if (!document.getElementById('panel-review').hidden) renderReview(st.get()); }).catch(() => {});
+  if (typeof CPGEO === 'undefined' && !cpDataP) loadCPData().then(() => { if (!document.getElementById('panel-review').hidden) renderReview(st.get()); }).catch(() => {});
 }
 document.getElementById('brSel').addEventListener('change', e => { brI = +e.target.value; renderReview(st.get()); });
 const loadScript = src => new Promise((ok, ko) => { if ([...document.scripts].some(x => x.src === src)) return ok(); const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
@@ -2029,6 +2066,7 @@ document.getElementById('brPdf').addEventListener('click', async () => {
   const btn = document.getElementById('brPdf'), msg = document.getElementById('brMsg'), a = A[brI];
   btn.disabled = true; msg.textContent = 'Preparando el PDF…';
   try {
+    if (typeof CPGEO === 'undefined') { await loadCPData(); renderReview(st.get()); }
     if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     if (!window.svg2pdf) await loadScript('https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js');
     const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: [960, 540] });
