@@ -917,7 +917,7 @@ section,section+section{border-top-style:solid}
 
   <div class="panel" id="panel-review" role="tabpanel" hidden>
     <section class="wrap"><div class="sec sec-full">
-      <div class="sec-head"><h2>Business review</h2><p>Seis páginas por concesionario con las claves del panel: resultado, evolución, origen de las ventas, mapa de su área y potencial. Sigue el periodo elegido arriba.</p></div>
+      <div class="sec-head"><h2>Business review</h2><p>Las claves de cada concesionario: resultado, evolución, origen de las ventas, mapa de su área, potencial y fichas ampliadas de sus CP críticos. Sigue el periodo elegido arriba.</p></div>
       <div class="br-bar"><label class="selw"><select id="brSel" aria-label="Concesionario"></select></label><span id="brPer"></span><button type="button" id="brPdf" class="br-btn">Descargar PDF</button><span id="brMsg" aria-live="polite"></span></div>
       <div id="brSlides"></div>
     </div></section>
@@ -1930,6 +1930,57 @@ function brMap(d, bx, by, bw, bh) {
     r += `<path d="M${cx.toFixed(1)} ${cy.toFixed(1)}l-8 -13a9.4 9.4 0 1 1 16 0z" fill="${BRC.bk}" stroke="#FFFFFF" stroke-width="2"/><circle cx="${cx.toFixed(1)}" cy="${(cy - 19).toFixed(1)}" r="3.6" fill="${BRC.o}"/>`; });
   return r + '</g>';
 }
+/* Zoom de un CP prioritario: el CP y su entorno inmediato */
+const BR_ZOOM = 6;
+function brCPMap(d, cp, n, bx, by, bw, bh) {
+  const empty = t => `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="${BRC.soft}"/><text x="${bx + bw / 2}" y="${by + bh / 2}" text-anchor="middle" font-size="15" fill="${BRC.muted}">${t}</text>`;
+  if (typeof CPGEO === 'undefined') return empty('Cargando el mapa…');
+  if (!CPGEO[cp] || !CPGB[cp]) return empty('Sin polígono para este código postal.');
+  const b0 = CPGB[cp], ext = Math.max(b0[2] - b0[0], b0[3] - b0[1]), pad = ext * .45 + 3;
+  let x0 = b0[0] - pad, y0 = b0[1] - pad, x1 = b0[2] + pad, y1 = b0[3] + pad;
+  const k = Math.min(bw / (x1 - x0), bh / (y1 - y0)), cx0 = (x0 + x1) / 2, cy0 = (y0 + y1) / 2;
+  x0 = cx0 - bw / k / 2; x1 = cx0 + bw / k / 2; y0 = cy0 - bh / k / 2; y1 = cy0 + bh / k / 2;
+  const ox = bx - x0 * k, oy = by - y0 * k, P = (x, y) => [ox + x * k, oy + y * k], sw = w => (w / k).toFixed(3);
+  const pri = new Set(d.pri), lep = c => d.ms.reduce((t, m) => t + (m >= 6 ? CPD[c][5 + m - 6] || 0 : 0), 0);
+  let bg = '', fg = '', lab = ''; const placed = [];
+  for (const c in CPGB) { const b = CPGB[c]; if (c === cp || b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1 || !CPGEO[c]) continue;
+    const mine = CPD[c] && CPD[c][0] === d.i;
+    if (!mine) bg += `<path d="${CPGEO[c]}"/>`; else fg += `<path d="${CPGEO[c]}" fill="${lep(c) > 0 ? BRC.bk : pri.has(c) ? '#F5C97E' : '#B9C2CC'}"/>`;
+    const [lx, ly] = P((b[0] + b[2]) / 2, (b[1] + b[3]) / 2), big = Math.min(b[2] - b[0], b[3] - b[1]) * k;
+    if (big > 52 && !placed.some(([px, py]) => Math.abs(px - lx) < 46 && Math.abs(py - ly) < 16) && (placed.push([lx, ly]), true) && lx > bx + 24 && lx < bx + bw - 24 && ly > by + 14 && ly < by + bh - 8) lab += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle" font-size="11" fill="${mine && lep(c) > 0 ? '#FFFFFF' : BRC.muted}">${c}</text>`; }
+    let r = `<defs><clipPath id="brz${d.i}_${cp}"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8"/></clipPath></defs><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="#F7F7F5"/>
+    <g clip-path="url(#brz${d.i}_${cp})"><g transform="translate(${ox.toFixed(2)} ${oy.toFixed(2)}) scale(${k.toFixed(5)})"><g fill="#E4E6E5" stroke="#FFFFFF" stroke-width="${sw(1)}">${bg}</g><g stroke="#FFFFFF" stroke-width="${sw(1.2)}">${fg}</g>
+    <path d="${CPGEO[cp]}" fill="${BRC.o}" stroke="${BRC.bk}" stroke-width="${sw(2.6)}" stroke-linejoin="round"/></g>${lab}`;
+  D.pins.filter(pn => pn[2] === d.i && CPGB[pn[1]]).forEach(pn => { const b = CPGB[pn[1]], [px, py] = P((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
+    if (px < bx || px > bx + bw || py < by || py > by + bh) return;
+    r += `<path d="M${px.toFixed(1)} ${py.toFixed(1)}l-8 -13a9.4 9.4 0 1 1 16 0z" fill="${BRC.bk}" stroke="#FFFFFF" stroke-width="2"/><circle cx="${px.toFixed(1)}" cy="${(py - 19).toFixed(1)}" r="3.6" fill="${BRC.o}"/>`; });
+  r += `<circle cx="${bx + 22}" cy="${by + 22}" r="14" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2.5"/><text x="${bx + 22}" y="${by + 27}" text-anchor="middle" font-size="14" font-weight="700" fill="${BRC.ink}">${n}</text>`;
+  return r + '</g>';
+}
+function brCard(d, cp, q, x, w) {
+  const X = CPX[cp], v = CPD[cp], pT = X[6], pO = X[7], qq = pT ? pO / pT : 0;
+  const areaPT = d.cps.reduce((t, c) => t + CPX[c][6], 0), aq = d.pt[1] ? d.pt[0] / d.pt[1] : 0, ref = .01, sc = Math.max(ref, aq, qq) * 1.15;
+  const tT = d.ms.reduce((t, m) => t + (m >= 6 ? v[1 + m - 6] || 0 : 0), 0);
+  const need = Math.max(0, Math.ceil(pT * ref - pO)), goal = Math.max(pO, Math.ceil(pT * ref));
+  let r = brCPMap(d, cp, q + 1, x, 150, w, 180);
+  r += `<text x="${x}" y="378" font-size="34" font-weight="700" fill="${BRC.ink}">${cp}</text><text x="${x}" y="400" font-size="15" fill="${BRC.muted}">${xe((cpName(cp) || '').slice(0, 26))}</text>
+    <text x="${x + w}" y="354" font-size="10.5" font-weight="700" letter-spacing="1" text-anchor="end" fill="${BRC.muted}">CUOTA PARTICULAR</text><text x="${x + w}" y="390" font-size="34" font-weight="700" text-anchor="end" fill="${BRC.ink}">${brPct(qq, 1)}</text>
+    <rect x="${x}" y="418" width="${w}" height="8" rx="4" fill="${BRC.soft}"/>${qq ? `<rect x="${x}" y="418" width="${(Math.min(1, qq / sc) * w).toFixed(1)}" height="8" rx="4" fill="${BRC.bk}"/>` : ''}
+    <line x1="${(x + ref / sc * w).toFixed(1)}" x2="${(x + ref / sc * w).toFixed(1)}" y1="411" y2="433" stroke="${BRC.o}" stroke-width="2.5"/>${aq ? `<line x1="${(x + aq / sc * w).toFixed(1)}" x2="${(x + aq / sc * w).toFixed(1)}" y1="413" y2="431" stroke="${BRC.muted}" stroke-width="2"/>` : ''}`;
+  const per = d.per.replace(/ 2026$/, '').toLowerCase();
+  [['MERCADO PARTICULAR', OJ.fmt(pT), 'jun–30 oct'], ['LEPAS PARTICULAR', OJ.fmt(pO), `de ${OJ.fmt(pT)}`], ['PARA LLEGAR AL 1 %', need ? '+' + OJ.fmt(need) : '0', 'matric.'], ['PESO EN SU ÁREA', areaPT ? OJ.fmt(pT / areaPT * 100, 1) + ' %' : 'n/d', 'del particular'], ['MERCADO TOTAL', OJ.fmt(tT), per], ['CUOTA PART. DEL ÁREA', brPct(aq, 2), 'referencia']].forEach(([l, val, u], k) => {
+    const cx = x + (k % 2) * w / 2, cy = 462 + Math.floor(k / 2) * 54;
+    r += `<text x="${cx}" y="${cy}" font-size="10.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">${xe(l)}</text><text x="${cx}" y="${cy + 26}" font-size="22" font-weight="700" fill="${BRC.ink}">${xe(val)}<tspan font-size="12" font-weight="400" fill="${BRC.muted}"> ${xe(u)}</tspan></text>`; });
+  r += brPara(need ? `Al 1 % serían ${OJ.fmt(goal)} matrículas en vez de ${OJ.fmt(pO)}.` : 'Ya supera el 1 % de cuota particular.', x, 624, w, 13.5, BRC.ink, 1.4, 400, 2).svg;
+  return r;
+}
+function brCardsSlide(d, cps, q0, page, total) {
+  const n = cps.length, w = 362.67, gap = 32;
+  let r = brHead(page, `${d.pri.length === 1 ? 'El código postal crítico' : `Códigos postales críticos${total > 1 ? ` (${q0 / 3 + 1} de ${total})` : ''}`} · mercado particular`, d);
+  cps.forEach((cp, k) => { r += brCard(d, cp, q0 + k, BRX + k * (w + gap), w); });
+  r += `<text x="${BRX}" y="660" font-size="12" fill="${BRC.muted}">Barra: cuota particular del CP · marca naranja: 1 % de referencia · marca gris: cuota particular de su área. Número: orden en la tabla de potencial.</text>`;
+  return brFrame(r + brFoot(page, d));
+}
 function brSlides(i, s) {
   const d = brData(i, s), out = [];
   /* 1 · Portada */
@@ -2022,7 +2073,7 @@ function brSlides(i, s) {
     [[BRC.bk, 'Con matrículas Lepas'], [BRC.o, 'Prioritario: sin Lepas y más de 10 particulares'], ['#B9C2CC', 'Resto de su área'], ['#E4E6E5', 'Otras áreas']].forEach(([c, l], q) => { const y = 330 + q * 40;
       r += `<rect x="${rx}" y="${y - 13}" width="16" height="16" rx="3" fill="${c}"/>` + brPara(l, rx + 28, y, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg; });
     const y2 = 330 + 4 * 40 + 10;
-    r += `<circle cx="${rx + 8}" cy="${y2 - 5}" r="9" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2"/><text x="${rx + 8}" y="${y2 - 1}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${BRC.ink}">1</text>` + brPara('Número del CP en la tabla de la página siguiente', rx + 28, y2, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg;
+    r += `<circle cx="${rx + 8}" cy="${y2 - 5}" r="9" fill="#FFFFFF" stroke="${BRC.o}" stroke-width="2"/><text x="${rx + 8}" y="${y2 - 1}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${BRC.ink}">1</text>` + brPara('Número del CP en la tabla de potencial y en su página de detalle', rx + 28, y2, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg;
     r += `<path d="M${rx + 8} ${y2 + 52}l-7 -11a8 8 0 1 1 14 0z" fill="${BRC.bk}"/><circle cx="${rx + 8}" cy="${y2 + 36}" r="3" fill="${BRC.o}"/>` + brPara('Exposición del concesionario', rx + 28, y2 + 46, rw - 28, 14, BRC.ink, 1.3, 400, 2).svg; }
   out.push(brFrame(r + brFoot(5, d)));
   /* 6 · Potencial y propuestas */
@@ -2047,6 +2098,7 @@ function brSlides(i, s) {
     const pp = brPara(p, R + 24, py + 26, colW - 24, 14.5, '#2A3A4C', 1.42, 400, 3); r += pp.svg; py += 40 + pp.h + 22; });
   if (!props.length) r += brPara('Sin propuestas automáticas para este periodo.', R, 232, colW, 15, BRC.muted).svg;
   out.push(brFrame(r + `<text x="${R}" y="650" font-size="12" fill="${BRC.muted}">Propuestas generadas a partir de los datos del panel; revisar con el concesionario.</text>` + brFoot(6, d)));
+  { const z = d.pri.slice(0, BR_ZOOM), pg = Math.ceil(z.length / 3); for (let k = 0; k < pg; k++) out.push(brCardsSlide(d, z.slice(k * 3, k * 3 + 3), k * 3, 7 + k, pg)); }
   return out;
 }
 let brI = -1;
