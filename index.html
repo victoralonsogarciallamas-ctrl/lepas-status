@@ -714,6 +714,17 @@ section,section+section{border-top-style:solid}
 .mcard .go{height:36px;border-radius:8px;font-size:14px;font-weight:600}
 .mx-c{font-weight:600}
 .notes .note{font-size:13.5px}
+.br-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 18px}
+.br-bar #brPer{color:var(--muted);font-size:14px}
+.br-btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .18s ease}
+.br-btn:hover{opacity:.85}.br-btn:disabled{opacity:.45;cursor:progress}
+.br-btn:focus-visible{outline:2px solid var(--oj-blue);outline-offset:2px}
+#brMsg{font-size:13px;color:var(--muted)}
+#brSlides{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:18px}
+.br-page{margin:0}
+.br-sheet{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#F0EFEC}
+.br-sheet svg{width:100%;height:auto;display:block}
+.br-page figcaption{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 </style>
 
 <header class="hero xh">
@@ -901,6 +912,14 @@ section,section+section{border-top-style:solid}
           <button type="button" class="more" id="cpMore" hidden></button>
         </div>
       </div>
+    </div></section>
+  </div>
+
+  <div class="panel" id="panel-review" role="tabpanel" hidden>
+    <section class="wrap"><div class="sec sec-full">
+      <div class="sec-head"><h2>Business review</h2><p>Cinco páginas por concesionario con las claves del panel: resultado, evolución, origen de las ventas y potencial. Sigue el periodo elegido arriba.</p></div>
+      <div class="br-bar"><label class="selw"><select id="brSel" aria-label="Concesionario"></select></label><span id="brPer"></span><button type="button" id="brPdf" class="br-btn">Descargar PDF</button><span id="brMsg" aria-live="polite"></span></div>
+      <div id="brSlides"></div>
     </div></section>
   </div>
 
@@ -1269,11 +1288,13 @@ const ICON = {
   origen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="17" r="2.2"/><path d="M8 8.5c4 1 4 7 8 7.5"/><path d="M14.5 14.2l1.6 1.8-2 1.4"/></svg>',
   mapa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
   red: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>',
+  review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 17v-3M12 17v-5M15 17v-2"/></svg>',
 };
 const VIEWS = [
   { id: 'ventas', label: 'Ventas', short: 'Ventas', icon: ICON.ventas, meta: 'Matrículas Lepas y mercado · 58 áreas · jul–oct 2026', lede: 'Cuánto vende la red, dónde gana cuota y dónde todavía no llega.' },
   { id: 'origen', label: 'Origen de la venta', short: 'Origen', icon: ICON.origen, meta: 'Área de matriculación frente a exposición vendedora · 166 coches', lede: 'Dónde se matricula cada coche y quién lo ha vendido.' },
   { id: 'mapa', label: 'Mapa', short: 'Mapa', icon: ICON.mapa, meta: 'Mercado y matrículas Lepas por código postal · jul–oct 2026', lede: 'Dónde está el mercado y dónde ya entra Lepas, código postal a código postal.' },
+  { id: 'review', label: 'Business review', short: 'Review', icon: ICON.review, meta: 'Resumen ejecutivo por concesionario · PDF para enviar', lede: 'Las claves de cada concesionario, listas para mandar en PDF.' },
   { id: 'red', label: 'Red y calidad', short: 'Red', icon: ICON.red, meta: 'Listado oficial de red · DMS · extracto de matriculaciones', lede: 'Qué exposiciones están abiertas y qué falta corregir en los datos.' },
 ];
 const sheet = OJ.sheet(document.querySelector('.sheet'));
@@ -1720,11 +1741,13 @@ function richTip(e) {
   tip.style.top = Math.max(6, Math.min(b.height - h - 6, y + 16)) + 'px';
 }
 const rgba = a => { const h = OJ.css('--oj-blue').replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a.toFixed(3)})`; };
+let cpDataP = null;
+const loadCPData = () => cpDataP || (cpDataP = new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'mapa-cp-data.js'; sc.onload = ok; sc.onerror = () => { cpDataP = null; ko(); }; document.body.appendChild(sc); }));
 function loadMap() {
   if (MAP || mapLoading) return; mapLoading = true;
   const add = src => new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = ko; document.body.appendChild(sc); });
   const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'mapa-cp.css'; document.head.appendChild(link);
-  add('mapa-cp-data.js').then(() => add('mapa-cp-engine.js')).then(() => {
+  loadCPData().then(() => add('mapa-cp-engine.js')).then(() => {
     const host = document.getElementById('map'); host.innerHTML = '';
     MAP = MapaCP.create(host, { fill: () => null, tooltip: cpTip, onClick: cp => pickCP(cp) });
     host.addEventListener('pointermove', richTip);
@@ -1819,6 +1842,215 @@ function renderMapa(s) {
   }
 }
 
+/* ========================= 9b. BUSINESS REVIEW ======================== */
+/* Diapositivas 16:9 en SVG (1280 x 720) a partir de los mismos datos del panel; el PDF se compone con jsPDF + svg2pdf. */
+const BRC = { bk: '#041B2F', w: '#F0EFEC', o: '#EB9201', ink: '#041B2F', muted: '#56657A', line: '#D9DCDD', soft: '#E9EBEA', zone: '#8A97A6', net: '#B9C0C6', bar: '#C9CFD4' };
+const BRW = 1280, BRH = 720, BRX = 64;
+const xe = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const brTxt = t => String(t).replace(/−/g, '-');
+const brPct = (v, d = 2) => Number.isFinite(v) ? OJ.fmt(v * 100, d) + ' %' : 'n/d';
+const brPt = (v, d = 2) => (v >= 0 ? '+' : '-') + OJ.fmt(Math.abs(v * 100), d) + ' pt';
+function brWrap(text, w, size) {
+  const max = Math.max(8, Math.floor(w / (size * .53))), out = []; let line = '';
+  String(text).split(/\s+/).forEach(word => { if ((line + ' ' + word).trim().length > max && line) { out.push(line); line = word; } else line = (line + ' ' + word).trim(); });
+  if (line) out.push(line); return out;
+}
+function brPara(text, x, y, w, size, color = BRC.ink, lh = 1.4, weight = 400, maxLines = 6) {
+  let ls = brWrap(text, w, size); if (ls.length > maxLines) { ls = ls.slice(0, maxLines); ls[maxLines - 1] = ls[maxLines - 1].replace(/\s*\S*$/, '') + '…'; }
+  return { svg: `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${color}">${ls.map((l, k) => `<tspan x="${x}" dy="${k ? size * lh : 0}">${xe(brTxt(l))}</tspan>`).join('')}</text>`, h: ls.length * size * lh };
+}
+function brLogo(x, y, h, color) {
+  const src = document.querySelector('.xh-id svg'); if (!src) return '';
+  const vb = src.getAttribute('viewBox').split(/[\s,]+/).map(Number), k = h / vb[3];
+  return `<g transform="translate(${x - vb[0] * k},${y - vb[1] * k}) scale(${k})" fill="${color}">${[...src.querySelectorAll('path')].map(p => `<path d="${p.getAttribute('d')}"/>`).join('')}</g>`;
+}
+const brFrame = (inner, bg = '#FFFFFF') => `<svg xmlns="http://www.w3.org/2000/svg" class="br-svg" viewBox="0 0 ${BRW} ${BRH}" width="${BRW}" height="${BRH}" font-family="Helvetica, Arial, sans-serif"><rect width="${BRW}" height="${BRH}" fill="${bg}"/>${inner}</svg>`;
+function brHead(n, title, d) {
+  return `<text x="${BRX}" y="70" font-size="13" font-weight="700" letter-spacing="1.6" fill="${BRC.muted}">${String(n).padStart(2, '0')}  ·  ${xe(d.a.name.toUpperCase())}</text>
+    <text x="${BRX}" y="116" font-size="34" font-weight="700" fill="${BRC.ink}">${xe(brTxt(title))}</text>
+    <text x="${BRW - BRX}" y="70" font-size="14" text-anchor="end" fill="${BRC.muted}">${xe(d.a.zona)} · ${xe(d.per)}</text>
+    <rect x="${BRX}" y="136" width="48" height="3" fill="${BRC.o}"/>`;
+}
+function brFoot(n, d) {
+  return `<line x1="${BRX}" x2="${BRW - BRX}" y1="676" y2="676" stroke="${BRC.line}"/>
+    <text x="${BRX}" y="700" font-size="12" fill="${BRC.muted}">Business review · ${xe(d.a.name)} · ${xe(d.per)} · datos a 30/10/2026</text>
+    ${brLogo(BRW - BRX - 150, 688, 14, BRC.bk)}
+    <text x="${BRW - BRX}" y="700" font-size="12" font-weight="700" text-anchor="end" fill="${BRC.ink}">${n}</text>`;
+}
+function brData(i, s) {
+  const a = A[i], ms = perMeses(s.per), g = agg([a], ms), zA = zoneAreas(a.zona), z = agg(zA, ms), red = agg(DEALER, ms);
+  const peers = zA.filter(x => x.real).map(x => ({ x, s: agg([x], ms).s })).filter(p => Number.isFinite(p.s)).sort((p, q) => q.s - p.s);
+  const pos = peers.findIndex(p => p.x.i === i) + 1;
+  const sold = CARS.filter(c => c.se === i && ms.includes(c.mo)), inArea = CARS.filter(c => c.ar === i && ms.includes(c.mo));
+  const own = inArea.filter(c => c.se === i).length;
+  const outBy = {}; sold.filter(c => c.ar !== i).forEach(c => { const k = c.ar; outBy[k] = (outBy[k] || 0) + 1; });
+  const inBy = {}; inArea.filter(c => c.se !== i).forEach(c => { (inBy[c.se] = inBy[c.se] || []).push(c); });
+  const pt = D.cm[i][0], zp = partAgg(zA), cmA = D.cm[i];
+  const cps = CPS.filter(cp => CPD[cp][0] === i && CPX[cp] && CPX[cp][6] > 0);
+  const pri = cps.filter(cp => cellOf(cp) === '0-0').sort((x, y) => CPX[y][6] - CPX[x][6]);
+  const priT = pri.reduce((t, cp) => t + CPX[cp][6], 0), priLo = pri.reduce((t, cp) => t + Math.max(0, CPX[cp][6] * .01 - CPX[cp][7]), 0);
+  const monthly = LANZ.map(m => ({ m, o: a.m[m][0], t: a.m[m][1], s: a.m[m][1] ? a.m[m][0] / a.m[m][1] : NaN, zs: agg(zA, [m]).s, ns: agg(DEALER, [m]).s }));
+  return { a, i, ms, per: perLabel(s.per).replace(/^./, c => c.toUpperCase()) + ' 2026', g, z, red, pos, peers: peers.length, sold, inArea, own, outBy, inBy, pt, zp, cmA, cps, pri, priT, priLo, monthly };
+}
+function brKeys(d) {
+  const k = [], nm = x => A[+x] ? A[+x].name : 'sin venta en el DMS';
+  if (Number.isFinite(d.g.s) && Number.isFinite(d.z.s)) k.push(d.g.s >= d.z.s
+    ? { ok: true, t: 'Cuota por encima de su zona', p: `${brPct(d.g.s, 3)} de cuota en su área frente a ${brPct(d.z.s, 3)} de ${d.a.zona} (${brPt(d.g.s - d.z.s, 3)}).${d.pos ? ` Es la ${d.pos}.ª de ${d.peers} de su zona.` : ''}` }
+    : { ok: false, t: 'Cuota por debajo de su zona', p: `${brPct(d.g.s, 3)} de cuota en su área frente a ${brPct(d.z.s, 3)} de ${d.a.zona} (${brPt(d.g.s - d.z.s, 3)}).${d.pos ? ` Es la ${d.pos}.ª de ${d.peers} de su zona.` : ''}` });
+  const best = d.monthly.filter(m => d.ms.includes(m.m)).sort((x, y) => y.o - x.o)[0];
+  if (best && d.g.o) k.push({ ok: true, t: `${OJ.fmt(d.g.o)} matrículas en su área`, p: `El mejor mes fue ${MESL[best.m]}, con ${OJ.fmt(best.o)} matrículas y ${brPct(best.s, 3)} de cuota. Mercado total del área: ${OJ.fmt(d.g.t)} matrículas.` });
+  else if (!d.g.o) k.push({ ok: false, t: 'Sin matrículas Lepas en su área', p: `Su área suma ${OJ.fmt(d.g.t)} matrículas de mercado en el periodo y ninguna es Lepas.` });
+  const others = Object.entries(d.inBy).sort((x, y) => y[1].length - x[1].length);
+  if (others.length) k.push({ ok: false, t: 'Otros matriculan en su área', p: `${OJ.fmt(d.inArea.length - d.own)} de ${OJ.fmt(d.inArea.length)} matrículas de su área las vendió otro: ${others.slice(0, 3).map(([se, cs]) => `${nm(se)} (${cs.length})`).join(', ')}.` });
+  else if (d.inArea.length) k.push({ ok: true, t: 'Su área es suya', p: `Las ${OJ.fmt(d.inArea.length)} matrículas de su área las vendió el propio concesionario.` });
+  if (d.pri.length) k.push({ ok: false, t: `${OJ.fmt(d.pri.length)} códigos postales prioritarios`, p: `Sin Lepas y con más de 10 matrículas de particulares (jun–30 oct): ${OJ.fmt(d.priT)} matrículas en total. Los mayores: ${d.pri.slice(0, 3).map(cp => `${cp} ${cpName(cp) || ''}`.trim()).join(', ')}.` });
+  return k.slice(0, 4);
+}
+function brSlides(i, s) {
+  const d = brData(i, s), out = [];
+  /* 1 · Portada */
+  out.push(brFrame(`${brLogo(BRX, 64, 30, BRC.w)}
+    <text x="${BRW - BRX}" y="88" font-size="16" text-anchor="end" fill="${BRC.w}" fill-opacity=".72">${xe(d.a.zona)}${d.a.grupo ? ' · ' + xe(d.a.grupo) : ''}</text>
+    <text x="${BRX}" y="360" font-size="18" font-weight="700" letter-spacing="3" fill="${BRC.o}">BUSINESS REVIEW</text>
+    <text x="${BRX}" y="440" font-size="${d.a.name.length > 24 ? 62 : 76}" font-weight="700" fill="${BRC.w}">${xe(d.a.name)}</text>
+    <text x="${BRX}" y="500" font-size="28" fill="${BRC.w}" fill-opacity=".86">${xe(d.per)} · Lepas L8 PHEV</text>
+    <line x1="${BRX}" x2="${BRW - BRX}" y1="628" y2="628" stroke="${BRC.w}" stroke-opacity=".28"/>
+    <text x="${BRX}" y="660" font-size="14" fill="${BRC.w}" fill-opacity=".72">Red Lepas · España · datos a 30/10/2026</text>
+    <text x="${BRW - BRX}" y="660" font-size="14" text-anchor="end" fill="${BRC.w}" fill-opacity=".72">Documento para uso interno del concesionario</text>`, BRC.bk));
+  /* 2 · Resumen */
+  const share = d.inArea.length ? d.own / d.inArea.length : NaN;
+  const kp = [
+    ['Matrículas en su área', OJ.fmt(d.g.o), `de ${OJ.fmt(d.g.t)} de mercado`],
+    ['Cuota en su área', brPct(d.g.s, 3), Number.isFinite(d.z.s) ? `${brPt(d.g.s - d.z.s, 3)} frente a ${d.a.zona}` : ''],
+    ['Ventas en el DMS', OJ.fmt(d.sold.length), `${OJ.fmt(d.sold.filter(c => c.ar === i).length)} en su área, ${OJ.fmt(d.sold.filter(c => c.ar !== i).length)} fuera`],
+    ['Suyas en su área', Number.isFinite(share) ? OJ.fmt(share * 100, 0) + ' %' : 'n/d', `${OJ.fmt(d.own)} de ${OJ.fmt(d.inArea.length)} matrículas`],
+  ];
+  const cw = (BRW - 2 * BRX) / 4;
+  let r = brHead(2, 'Resumen del periodo', d) + `<rect x="${BRX}" y="172" width="${BRW - 2 * BRX}" height="150" rx="10" fill="none" stroke="${BRC.line}"/>`;
+  kp.forEach(([l, v, sub], k) => { const x = BRX + k * cw + 24;
+    r += `${k ? `<line x1="${BRX + k * cw}" x2="${BRX + k * cw}" y1="172" y2="322" stroke="${BRC.line}"/>` : ''}
+      <text x="${x}" y="206" font-size="12.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">${xe(l.toUpperCase())}</text>
+      <text x="${x}" y="266" font-size="46" font-weight="700" fill="${BRC.ink}">${xe(v)}</text>
+      <text x="${x}" y="298" font-size="14.5" fill="${BRC.muted}">${xe(brTxt(sub))}</text>`; });
+  r += `<text x="${BRX}" y="372" font-size="13" font-weight="700" letter-spacing="1.6" fill="${BRC.muted}">CLAVES</text>`;
+  brKeys(d).forEach((k, n) => { const x = BRX + (n % 2) * 584, y = 400 + Math.floor(n / 2) * 132;
+    r += k.ok ? `<circle cx="${x + 12}" cy="${y + 12}" r="12" fill="${BRC.bk}"/><path d="M${x + 6} ${y + 12.5}l4 4 8-9" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`
+      : `<circle cx="${x + 12}" cy="${y + 12}" r="11" fill="none" stroke="${BRC.o}" stroke-width="2.4"/><path d="M${x + 12} ${y + 6}v7" stroke="${BRC.o}" stroke-width="2.4" stroke-linecap="round"/><circle cx="${x + 12}" cy="${y + 17.5}" r="1.6" fill="${BRC.o}"/>`;
+    r += `<text x="${x + 40}" y="${y + 18}" font-size="19" font-weight="700" fill="${BRC.ink}">${xe(brTxt(k.t))}</text>` + brPara(k.p, x + 40, y + 46, 520, 15, '#2A3A4C', 1.42, 400, 3).svg; });
+  out.push(brFrame(r + brFoot(2, d)));
+  /* 3 · Mes a mes */
+  r = brHead(3, 'Matrículas y cuota mes a mes', d);
+  const cx0 = BRX + 50, cx1 = 900, cy0 = 200, cy1 = 520, mo = Math.max(1, ...d.monthly.map(m => m.o)), msx = Math.max(1e-6, ...d.monthly.flatMap(m => [m.s, m.zs, m.ns]).filter(Number.isFinite)) * 1.15;
+  const X = k => cx0 + (k + .5) * (cx1 - cx0) / d.monthly.length, Ys = v => cy1 - v / msx * (cy1 - cy0), Yo = v => cy1 - v / mo * (cy1 - cy0) * .82;
+  for (let t = 0; t <= 4; t++) { const v = msx / 1.15 * t / 4, y = Ys(v); r += `<line x1="${cx0}" x2="${cx1}" y1="${y}" y2="${y}" stroke="${t ? BRC.soft : BRC.line}"/><text x="${cx0 - 10}" y="${y + 4}" font-size="11.5" text-anchor="end" fill="${BRC.muted}">${xe(OJ.fmt(v * 100, 2))} %</text>`; }
+  const bw = (cx1 - cx0) / d.monthly.length * .42;
+  d.monthly.forEach((m, k) => { const inP = d.ms.includes(m.m);
+    r += `<rect x="${X(k) - bw / 2}" y="${Yo(m.o)}" width="${bw}" height="${cy1 - Yo(m.o)}" rx="2" fill="${BRC.bar}" fill-opacity="${inP ? 1 : .5}"/>
+      <text x="${X(k)}" y="${Yo(m.o) - 8}" font-size="13" font-weight="700" text-anchor="middle" fill="${BRC.ink}">${m.o}</text>
+      <text x="${X(k)}" y="${cy1 + 24}" font-size="13.5" text-anchor="middle" font-weight="${inP ? 700 : 400}" fill="${inP ? BRC.ink : BRC.muted}">${MESES[m.m]}${m.m === PARCIAL ? '*' : ''}</text>`; });
+  const line = (key, col, wdt, dash) => `<polyline points="${d.monthly.map((m, k) => Number.isFinite(m[key]) ? `${X(k)},${Ys(m[key])}` : '').filter(Boolean).join(' ')}" fill="none" stroke="${col}" stroke-width="${wdt}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
+  r += line('ns', BRC.net, 2.5) + line('zs', BRC.zone, 2.5, '7 5') + line('s', BRC.bk, 3.5);
+  d.monthly.forEach((m, k) => { if (Number.isFinite(m.s)) r += `<circle cx="${X(k)}" cy="${Ys(m.s)}" r="5" fill="${BRC.bk}" stroke="#FFFFFF" stroke-width="2"/>`; });
+  [['Matrículas en su área', 'bar'], ['Cuota del concesionario', 'bk'], [`Cuota ${d.a.zona}`, 'zone'], ['Cuota de la red', 'net']].forEach(([l, c], k) => { const x = cx0 + k * 200;
+    r += c === 'bar' ? `<rect x="${x}" y="164" width="14" height="12" rx="2" fill="${BRC.bar}"/>` : `<line x1="${x}" x2="${x + 22}" y1="170" y2="170" stroke="${BRC[c]}" stroke-width="3"${c === 'zone' ? ' stroke-dasharray="6 4"' : ''}/>`;
+    r += `<text x="${x + 30}" y="175" font-size="13" fill="${BRC.muted}">${xe(l)}</text>`; });
+  r += `<text x="${cx0}" y="590" font-size="12.5" font-weight="700" fill="${BRC.muted}">CUOTA</text>`;
+  [['Su área', 's'], [d.a.zona, 'zs'], ['Red', 'ns']].forEach(([l, k], n) => { const y = 614 + n * 20;
+    r += `<text x="${cx0}" y="${y}" font-size="13" fill="${BRC.muted}">${xe(l)}</text>` + d.monthly.map((m, q) => `<text x="${X(q)}" y="${y}" font-size="13" text-anchor="middle" font-weight="${k === 's' ? 700 : 400}" fill="${BRC.ink}">${xe(Number.isFinite(m[k]) ? OJ.fmt(m[k] * 100, 3) : 'n/d')}</text>`).join(''); });
+  const px = 950, pw = BRW - BRX - px;
+  r += `<rect x="${px}" y="200" width="${pw}" height="320" rx="10" fill="${BRC.soft}"/>
+    <text x="${px + 22}" y="236" font-size="12.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">CANAL PARTICULAR · JUN–30 OCT</text>
+    <text x="${px + 22}" y="292" font-size="42" font-weight="700" fill="${BRC.ink}">${xe(brPct(d.pt[1] ? d.pt[0] / d.pt[1] : NaN, 2))}</text>
+    <text x="${px + 22}" y="318" font-size="14" fill="${BRC.muted}">${OJ.fmt(d.pt[0])} de ${OJ.fmt(d.pt[1])} matrículas</text>
+    <text x="${px + 22}" y="350" font-size="14" fill="${BRC.ink}">${xe(d.a.zona)}: ${xe(brPct(d.zp.s, 2))}</text>`;
+  ['Particular', 'Empresa', 'Rent a car'].forEach((l, k) => { const y = 396 + k * 34, [o, t] = d.cmA[k];
+    r += `<text x="${px + 22}" y="${y}" font-size="14" fill="${BRC.ink}">${l}</text><text x="${px + pw - 22}" y="${y}" font-size="14" text-anchor="end" fill="${BRC.ink}"><tspan font-weight="700">${OJ.fmt(o)}</tspan> de ${OJ.fmt(t)}</text>
+      <line x1="${px + 22}" x2="${px + pw - 22}" y1="${y + 12}" y2="${y + 12}" stroke="${BRC.line}"/>`; });
+  out.push(brFrame(r + `<text x="${px}" y="548" font-size="12" fill="${BRC.muted}">* Octubre hasta el día 28.</text>` + brFoot(3, d)));
+  /* 4 · Origen de la venta */
+  r = brHead(4, 'Dónde matricula y quién matricula en su área', d);
+  const colW = 540, L = BRX, R = BRX + 608;
+  const outRows = [['own', d.sold.filter(c => c.ar === i).length, 'Su propia área', '']].concat(Object.entries(d.outBy).sort((x, y) => y[1] - x[1]).map(([ar, n]) => { const x = A[+ar];
+    return ['out', n, x ? (x.real ? 'Área de ' + x.name : x.name) : 'Sin área asignada', x && x.real ? (x.grupo && x.grupo === d.a.grupo ? 'mismo grupo' : 'otro grupo') : '']; })).filter(x => x[1] > 0);
+  r += `<text x="${L}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Dónde se matriculan sus ventas</text>` + brPara(`${OJ.fmt(d.sold.length)} ventas en el DMS en el periodo.`, L, 212, colW, 14.5, BRC.muted).svg;
+  const tot = Math.max(1, d.sold.length);
+  outRows.slice(0, 8).forEach(([k, n, l, tag], q) => { const y = 252 + q * 46;
+    r += `<text x="${L}" y="${y}" font-size="15" font-weight="${k === 'own' ? 700 : 400}" fill="${BRC.ink}">${xe(l.length > 40 ? l.slice(0, 39) + '…' : l)}${tag ? `<tspan fill="${BRC.muted}" font-size="13">  · ${tag}</tspan>` : ''}</text>
+      <text x="${L + colW}" y="${y}" font-size="15" font-weight="700" text-anchor="end" fill="${BRC.ink}">${n}<tspan font-weight="400" fill="${BRC.muted}">  ${OJ.fmt(n / tot * 100, 0)} %</tspan></text>
+      <rect x="${L}" y="${y + 10}" width="${colW}" height="6" rx="3" fill="${BRC.soft}"/><rect x="${L}" y="${y + 10}" width="${colW * n / tot}" height="6" rx="3" fill="${k === 'own' ? BRC.bk : BRC.o}"/>`; });
+  if (!d.sold.length) r += brPara('Sin ventas en el DMS en el periodo.', L, 256, colW, 15, BRC.muted).svg;
+  r += `<line x1="${R - 34}" x2="${R - 34}" y1="170" y2="640" stroke="${BRC.line}"/>
+    <text x="${R}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Quién matricula en su área</text>` + brPara(`${OJ.fmt(d.inArea.length)} matrículas en su área, ${OJ.fmt(d.own)} suyas${d.inArea.length ? ` (${OJ.fmt(d.own / d.inArea.length * 100, 0)} %)` : ''}.`, R, 212, colW, 14.5, BRC.muted).svg;
+  const others = Object.entries(d.inBy).sort((x, y) => y[1].length - x[1].length);
+  if (!others.length) r += brPara(d.inArea.length ? 'Ningún otro concesionario ha matriculado en su área en el periodo.' : 'No hay matrículas en su área en el periodo.', R, 256, colW, 15, BRC.ink).svg;
+  others.slice(0, 6).forEach(([se, cs], q) => { const y = 256 + q * 62, x = A[+se];
+    const locs = Object.entries(cs.reduce((m, c) => (m[c.loc] = (m[c.loc] || 0) + 1, m), {})).sort((p, q2) => q2[1] - p[1]).map(([l, n]) => l + (n > 1 ? ` (${n})` : '')).join(', ');
+    r += `<text x="${R}" y="${y}" font-size="15.5" font-weight="700" fill="${BRC.ink}">${xe(x ? x.name : 'Sin venta en el DMS')}${x ? `<tspan font-weight="400" fill="${BRC.muted}" font-size="13">  · ${x.grupo && x.grupo === d.a.grupo ? 'mismo grupo' : 'otro grupo'}</tspan>` : ''}</text>
+      <text x="${R + colW}" y="${y}" font-size="15.5" font-weight="700" text-anchor="end" fill="${BRC.ink}">${cs.length}</text>` + brPara(locs, R, y + 22, colW - 40, 13, BRC.muted, 1.35, 400, 2).svg; });
+  out.push(brFrame(r + brFoot(4, d)));
+  /* 5 · Potencial y propuestas */
+  r = brHead(5, 'Potencial en su área y próximos pasos', d);
+  r += `<text x="${L}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Códigos postales prioritarios</text>` + brPara(`${OJ.fmt(d.pri.length)} códigos postales de su área sin Lepas y con más de 10 matrículas de particulares (jun–30 oct), de ${OJ.fmt(d.cps.length)} con mercado particular.`, L, 212, colW, 14.5, BRC.muted, 1.4, 400, 2).svg;
+  const ty = 268;
+  r += `<text x="${L}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">CP</text><text x="${L + 80}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" fill="${BRC.muted}">MUNICIPIO</text><text x="${L + colW}" y="${ty}" font-size="11.5" font-weight="700" letter-spacing="1" text-anchor="end" fill="${BRC.muted}">MERCADO PARTICULAR</text><line x1="${L}" x2="${L + colW}" y1="${ty + 10}" y2="${ty + 10}" stroke="${BRC.line}"/>`;
+  d.pri.slice(0, 9).forEach((cp, q) => { const y = ty + 38 + q * 36;
+    r += `<rect x="${L}" y="${y - 10}" width="9" height="9" rx="1.5" fill="${BRC.o}"/><text x="${L + 18}" y="${y}" font-size="15" font-weight="700" fill="${BRC.ink}">${cp}</text><text x="${L + 80}" y="${y}" font-size="15" fill="${BRC.ink}">${xe((cpName(cp) || '').slice(0, 34))}</text><text x="${L + colW}" y="${y}" font-size="15" text-anchor="end" fill="${BRC.ink}">${OJ.fmt(CPX[cp][6])}</text><line x1="${L}" x2="${L + colW}" y1="${y + 12}" y2="${y + 12}" stroke="${BRC.soft}"/>`; });
+  if (!d.pri.length) r += brPara('No hay códigos postales prioritarios en su área.', L, ty + 40, colW, 15, BRC.muted).svg;
+  const props = [];
+  if (d.pri.length) props.push(['Trabajar los códigos postales prioritarios', `Empezar por ${d.pri.slice(0, 3).map(cp => `${cp} ${cpName(cp) || ''}`.trim()).join(', ')}: ${OJ.fmt(d.pri.slice(0, 3).reduce((t, cp) => t + CPX[cp][6], 0))} matrículas de particulares entre los tres.`]);
+  if (d.priLo >= .5) props.push(['Objetivo del 1 % en esos códigos postales', `Llegar al 1 % de cuota particular en los ${OJ.fmt(d.pri.length)} códigos postales prioritarios son unas ${OJ.fmt(Math.round(d.priLo))} matrículas más en cinco meses.`]);
+  if (others.length) { const kn = others.filter(([se]) => A[+se]).slice(0, 2), un = others.filter(([se]) => !A[+se]).reduce((t, [, cs]) => t + cs.length, 0);
+    props.push(['Revisar las matrículas ajenas en su área', kn.length ? `${kn.map(([se, cs]) => `${A[+se].name} (${cs.length})`).join(' y ')} ${kn.length > 1 ? 'han' : 'ha'} matriculado en su área${un ? `, y ${un} sin venta en el DMS` : ''}: acordar el reparto y el seguimiento de esos clientes.` : `${un} matrículas de su área no constan como venta en el DMS: revisar quién las vendió.`]); }
+  const outN = d.sold.filter(c => c.ar !== i).length;
+  if (outN) props.push(['Seguir las ventas fuera de su área', `${OJ.fmt(outN)} de sus ${OJ.fmt(d.sold.length)} ventas se matricularon fuera de su área; confirmar que su posventa queda cubierta.`]);
+  if (Number.isFinite(d.g.s) && Number.isFinite(d.z.s) && d.g.s < d.z.s) props.push([`Cerrar la distancia con ${d.a.zona}`, `A la cuota de su zona serían unas ${OJ.fmt(Math.max(0, Math.round(d.g.t * d.z.s - d.g.o)))} matrículas más en el periodo.`]);
+  r += `<line x1="${R - 34}" x2="${R - 34}" y1="170" y2="640" stroke="${BRC.line}"/><text x="${R}" y="186" font-size="18" font-weight="700" fill="${BRC.ink}">Propuestas para el próximo periodo</text>`;
+  let py = 230;
+  props.slice(0, 4).forEach(([t, p], q) => { r += `<text x="${R}" y="${py}" font-size="14" font-weight="700" fill="${BRC.o}">${q + 1}</text><text x="${R + 24}" y="${py}" font-size="16.5" font-weight="700" fill="${BRC.ink}">${xe(t)}</text>`;
+    const pp = brPara(p, R + 24, py + 26, colW - 24, 14.5, '#2A3A4C', 1.42, 400, 3); r += pp.svg; py += 40 + pp.h + 22; });
+  if (!props.length) r += brPara('Sin propuestas automáticas para este periodo.', R, 232, colW, 15, BRC.muted).svg;
+  out.push(brFrame(r + `<text x="${R}" y="650" font-size="12" fill="${BRC.muted}">Propuestas generadas a partir de los datos del panel; revisar con el concesionario.</text>` + brFoot(5, d)));
+  return out;
+}
+let brI = -1;
+function renderReview(s) {
+  const sel = document.getElementById('brSel'), box = document.getElementById('brSlides'), btn = document.getElementById('brPdf');
+  const es = A.filter(a => a.real).sort((x, y) => x.name.localeCompare(y.name, 'es'));
+  if (s.ent >= 0 && A[s.ent].real) brI = s.ent; else if (brI < 0 || !A[brI].real) brI = (es.slice().sort((x, y) => agg([y], LANZ).o - agg([x], LANZ).o)[0] || es[0]).i;
+  sel.innerHTML = es.map(a => `<option value="${a.i}"${a.i === brI ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
+  document.getElementById('brPer').textContent = perLabel(s.per) + ' 2026';
+  box.innerHTML = brSlides(brI, s).map((svg, k) => `<figure class="br-page"><div class="br-sheet">${svg}</div><figcaption>${k + 1} de 5</figcaption></figure>`).join('');
+  btn.disabled = false;
+  if (typeof CPNAME === 'undefined' && !cpDataP) loadCPData().then(() => { if (!document.getElementById('panel-review').hidden) renderReview(st.get()); }).catch(() => {});
+}
+document.getElementById('brSel').addEventListener('change', e => { brI = +e.target.value; renderReview(st.get()); });
+const loadScript = src => new Promise((ok, ko) => { if ([...document.scripts].some(x => x.src === src)) return ok(); const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
+document.getElementById('brPdf').addEventListener('click', async () => {
+  const btn = document.getElementById('brPdf'), msg = document.getElementById('brMsg'), a = A[brI];
+  btn.disabled = true; msg.textContent = 'Preparando el PDF…';
+  try {
+    if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if (!window.svg2pdf) await loadScript('https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js');
+    const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: [960, 540] });
+    doc.setProperties({ title: `Business review ${a.name}`, author: 'Red Lepas España', subject: 'Business review por concesionario' });
+    const svgs = [...document.querySelectorAll('#brSlides svg.br-svg')];
+    for (let k = 0; k < svgs.length; k++) {
+      if (k) doc.addPage([960, 540], 'landscape');
+      const el = svgs[k].cloneNode(true); el.setAttribute('font-family', 'helvetica');
+      el.querySelectorAll('text,tspan').forEach(t => { if (t.firstChild && t.firstChild.nodeType === 3) t.firstChild.nodeValue = t.firstChild.nodeValue.replace(/[−–]/g, '-').replace(/…/g, '...'); });
+      const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-99999px;top:0;width:1280px;height:720px'; host.appendChild(el); document.body.appendChild(host);
+      await doc.svg(el, { x: 0, y: 0, width: 960, height: 540 }); host.remove();
+    }
+    const per = st.get().per, fname = `Business-review_${a.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-')}_${per === 'jo' ? 'jul-oct' : MESES[+per.slice(1) - 1].toLowerCase()}-2026.pdf`;
+    const blob = doc.output('blob');
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) { await dl.save({ filename: fname, data: blob }); msg.textContent = 'PDF listo.'; }
+    else { const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = fname; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); msg.textContent = 'PDF descargado.'; }
+  } catch (e) { msg.textContent = e && e.code === 'declined' ? '' : 'No se pudo generar el PDF. Vuelve a intentarlo.'; }
+  btn.disabled = false;
+});
+
+
 /* ========================= 10. ARRANQUE =============================== */
 OJ.nav(VIEWS, id => {
   const v = VIEWS.find(x => x.id === id);
@@ -1826,9 +2058,10 @@ OJ.nav(VIEWS, id => {
     const e = document.getElementById(el); e.textContent = t; e.classList.remove('fade-key'); e.offsetWidth; e.classList.add('fade-key');
   }
   if (id === 'ventas' && chart) chart.resize();
+  if (id === 'review') renderReview(st.get());
   if (id === 'mapa') { loadMap(); requestAnimationFrame(fitMapHeight); }
 });
-st.on(s => { renderSelects(s); renderCtx(s); renderResumen(s); renderTrend(s); renderZonas(s); renderCanales(s); renderRank(s); renderOrigen(s); renderRed(s); if (!document.getElementById('panel-mapa').hidden || MAP) renderMapa(s); });
+st.on(s => { renderSelects(s); renderCtx(s); renderResumen(s); renderTrend(s); renderZonas(s); renderCanales(s); renderRank(s); renderOrigen(s); renderRed(s); if (!document.getElementById('panel-mapa').hidden || MAP) renderMapa(s); if (!document.getElementById('panel-review').hidden) renderReview(s); });
 </script>
 
 <script>
