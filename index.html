@@ -666,23 +666,70 @@ footer .logo-svg{height:13px;width:auto;color:var(--ink)}
 .selw select:focus-visible{outline:2px solid var(--oj-blue);outline-offset:2px}
 .sentence{max-width:70ch;font-size:19px;line-height:1.55;margin:0 0 22px;font-weight:300}
 .sentence b{font-weight:700}
+/* ===== Registro ejecutivo: cabecera compacta, jerarquía por peso y tamaño, sin adornos de presentación ===== */
+body{font-weight:400;font-size:15px}
+::selection{background:color-mix(in srgb,var(--accent2) 28%,transparent);color:var(--ink)}
+.num,td.num,.kpi .v{font-variant-numeric:tabular-nums}
+.hero.xh{background:var(--hero);color:var(--hero-ink)}
+.hero.xh .wrap{padding-block:22px 20px}
+.xh-in{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px 40px}
+.xh-id{display:flex;align-items:center;gap:18px;min-width:0}
+.xh-id .logo-svg{height:18px;flex:none}
+.xh-rule{width:1px;align-self:stretch;min-height:34px;background:color-mix(in srgb,var(--hero-ink) 28%,transparent)}
+.xh h1{margin:0;font-size:19px;font-weight:600;letter-spacing:0;line-height:1.2;text-transform:none}
+.xh-sub{margin:2px 0 0;font-size:13.5px;line-height:1.4;color:color-mix(in srgb,var(--hero-ink) 74%,transparent);font-style:normal;font-weight:400}
+.xh-meta{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0}
+.xh-meta dt{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--hero-ink) 62%,transparent)}
+.xh-meta dd{margin:2px 0 0;font-size:13.5px}
+@media (max-width:700px){.xh-meta{display:grid;grid-template-columns:1fr 1fr}.xh-meta>div:nth-child(2){grid-column:1/-1;order:3}}
+.chrome{border-bottom:1px solid var(--line)}
+section{padding-block:40px}
+section{border-top:1px solid var(--line)}
+.sec-head .eyebrow{display:none}
+.sec-head h2{margin-top:0;font-size:18px;font-weight:600;text-transform:none;letter-spacing:0;line-height:1.3}
+.sec-head h2:after{display:none}
+.sec-head p{margin-top:8px;font-size:13.5px;line-height:1.55}
+.sentence{font-size:15.5px;line-height:1.6;font-weight:400;max-width:78ch;margin-bottom:18px}
+.kpi{padding:16px 18px}
+.kpi .k{font-size:11.5px;letter-spacing:.05em}
+#kpis .kpi .v{font-size:clamp(20px,15cqi,30px)!important;font-weight:600;letter-spacing:-.01em;margin-top:6px}
+.kpi .v small{font-size:14px}
+.kpi .d{font-size:13px}
+.kpi{position:relative}
+.kpi .go{position:absolute;right:16px;top:14px;margin:0;font-size:12px;opacity:0;transition:opacity .15s ease}
+#kpis{align-items:stretch}
+section,section+section{border-top-style:solid}
+.sec.sec-full{grid-template-columns:minmax(0,1fr);gap:16px}
+.sec.sec-full .sec-head p{max-width:110ch}
+.dt td{padding:8px 10px}
+.dt th{font-size:10.5px;letter-spacing:.06em;font-weight:500}
+#rank td:first-child,#rank td:first-child .dname{white-space:nowrap}
+.dv{width:90px}
+.recb .bar{width:56px}
+.note{border-style:solid;border-color:var(--line);font-size:13.5px}
+.kpi:hover .go,.kpi:focus-visible .go{opacity:1}
+.minis b{font-size:20px;font-weight:600}
+.mcard{background:var(--panel);border-color:var(--line)}
+.mcard dd{font-size:17px;font-weight:600}
+.mcard .go{height:36px;border-radius:8px;font-size:14px;font-weight:600}
+.mx-c{font-weight:600}
+.notes .note{font-size:13.5px}
 </style>
 
-<header class="hero">
-  <svg class="lmark" viewBox="0 0 1814 309" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M1361.0 309.0 L1.0 309.0 L0.0 308.0 L0.0 1.0 L1.0 0.0 L57.0 0.7 L1713.0 23.7 L1767.0 24.5 L1773.0 25.5 L1807.0 26.3 L1810.0 26.7 L1813.6 29.0 L1814.0 31.0 L1813.2 34.0 L1810.0 38.4 L1673.0 93.7 L1608.0 121.7 L1556.0 146.8 L1532.0 159.7 L1498.0 179.7 L1472.0 196.8 L1449.0 213.6 L1428.0 230.6 L1410.0 246.8 L1392.8 264.0 L1368.6 292.0 L1363.6 302.0 L1362.2 308.0 L1361.0 309.0 Z"/></svg>
+<header class="hero xh">
   <div class="wrap">
-    <div class="hero-top">
-      <span class="meta caps fade-key" id="heroMeta"></span>
-      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="221.00 561.00 778.19 138.46" fill="currentColor" role="img" aria-label="Lepas">
+    <div class="xh-in">
+      <div class="xh-id"><svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="221.00 561.00 778.19 138.46" fill="currentColor" role="img" aria-label="Lepas">
 <path d="M 973.609375 632.757812 C 952.351562 629.71875 932.429688 632.128906 918.25 628.820312 C 886.691406 621.460938 946.449219 610.210938 988.269531 613.75 L 997.191406 606.660156 C 900.609375 599.449219 870.640625 622.160156 883.589844 629.910156 C 868.851562 637.429688 841.222656 647.820312 839.871094 644.378906 C 836.03125 634.597656 864.230469 608.667969 871.242188 604.199219 C 780.761719 596.488281 731.632812 627.320312 720.640625 646.929688 C 695.832031 652.820312 656.632812 659.417969 638.210938 658.078125 C 684.210938 650.167969 730.792969 629.308594 726.742188 615.417969 C 720.871094 595.269531 664.25 599.089844 583.871094 621.257812 L 581.042969 629.019531 C 661.570312 617 691.332031 609.71875 692.589844 621.589844 C 693.3125 628.347656 662.050781 647.039062 609.902344 659.257812 C 606.542969 660.050781 608.480469 665.800781 612.050781 666.070312 C 651.222656 669.089844 687.910156 665.140625 718.449219 655.929688 C 721.292969 668.589844 760.160156 670.730469 815.910156 636.847656 C 807.859375 653.53125 810.242188 688.03125 895.671875 637.398438 C 907.089844 641.9375 961.75 634.738281 960.492188 643.980469 C 958.980469 655.019531 900.609375 657.929688 876.441406 655.628906 L 869.320312 661.109375 C 928.472656 666.53125 989.441406 661.660156 990.191406 643.480469 C 990.300781 640.929688 990.589844 635.179688 973.609375 632.75 Z M 748.339844 649.78125 C 742.609375 641.480469 772.640625 613.078125 827.761719 614.109375 C 803.410156 635.570312 753.820312 657.71875 748.339844 649.78125 Z M 961.972656 635.148438 C 961.972656 635.148438 962.0625 635.148438 962.109375 635.148438 C 962.109375 635.199219 962.0625 635.1875 961.972656 635.148438 Z M 961.972656 635.148438 "/>
 <path d="M 548.230469 642.230469 C 518.792969 647.558594 471.671875 657.019531 445.351562 648.730469 C 494.632812 640.519531 534.992188 632.191406 540.09375 628.898438 C 558.621094 616.679688 527.78125 602.679688 504 602.261719 C 478.34375 601.808594 436.523438 607.238281 416.640625 627.699219 C 412.210938 632.578125 410.59375 637.710938 411.3125 642.589844 C 314.101562 649.558594 308.132812 651.621094 297.542969 646.789062 C 274.28125 636.179688 330.050781 592.039062 418.03125 563 L 373 563 C 299.300781 587.558594 223 629.890625 246.25 659.371094 C 266.09375 684.53125 366.972656 662.699219 417.671875 653.679688 C 422.691406 658.21875 430.433594 661.769531 440.59375 663.449219 C 490.78125 669.910156 538.550781 655.960938 585.933594 645.339844 C 565.382812 660.949219 536.851562 683.191406 518.121094 697.460938 L 549.242188 697.460938 C 580.773438 673.351562 599.683594 654.710938 632.960938 624.039062 C 602.53125 631.171875 579.492188 636.578125 548.242188 642.21875 Z M 447.320312 629.519531 C 461.550781 616.890625 514.761719 608.191406 520.800781 620.558594 C 508.433594 627.191406 479.070312 633.410156 441.613281 639.039062 C 441.972656 636.761719 443.742188 632.691406 447.3125 629.519531 Z M 447.320312 629.519531 "/>
-</svg>
+</svg><span class="xh-rule" aria-hidden="true"></span>
+        <div><h1>Network Status</h1><p class="xh-sub" id="heroSub"></p></div></div>
+      <dl class="xh-meta">
+        <div><dt>Ámbito</dt><dd>Red Lepas · L8 PHEV · España</dd></div>
+        <div><dt>Contenido</dt><dd id="heroMeta"></dd></div>
+        <div><dt>Datos a</dt><dd class="num">30/10/2026</dd></div>
+      </dl>
     </div>
-    <div class="band">
-      <h1>Network<b>Status</b></h1>
-      <p><span>Red Lepas · L8 PHEV</span><span>España 2026</span></p>
-    </div>
-    <p class="hero-sub fade-key" id="heroSub"></p>
   </div>
 </header>
 
@@ -759,7 +806,7 @@ footer .logo-svg{height:13px;width:auto;color:var(--ink)}
       <div id="canales"></div>
     </div></section>
 
-    <section class="wrap"><div class="sec">
+    <section class="wrap"><div class="sec sec-full">
       <div class="sec-head"><div class="eyebrow caps">Áreas de influencia</div><h2>Ranking de la red</h2>
         <p>Cada fila es un área de influencia: las matrículas Lepas en sus códigos postales, venda quien venda. «Suyas» son las que vendió el propio concesionario del área, y el % dice qué parte de las matrículas de su área son suyas. Ordena por cualquier columna y pulsa una fila para abrir su ficha. Potencial: matrículas que faltan para llegar a la cuota media de las zonas 1 a 5, sin Zona libre ni Paraíso fiscal.</p></div>
       <div>
