@@ -1,5 +1,5 @@
 // Red primero: siempre se intenta la versión publicada más reciente; la copia guardada solo se usa sin conexión.
-const CACHE = 'lepas-status-v8';
+const CACHE = 'lepas-status-v9';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
